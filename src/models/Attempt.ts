@@ -3,7 +3,7 @@ const AttemptSchema = new Schema({
   userId: { type: String, required: true, index: true, default: 'local-user' },
   problemSlug: { type: String, required: true, index: true },
   code: { type: String, required: true },
-  language: { type: String, default: 'java' },
+  language: { type: String, default: 'python' },
   result: { type: String, enum: ['solved','attempted','failed'], default: 'attempted' },
   testMode: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }

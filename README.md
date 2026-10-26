@@ -49,3 +49,13 @@ Pyodide is the open-source Python interpreter compiled to WebAssembly and runs c
 - Set `MONGODB_URI` in `.env.local` to persist tracked problems and attempts in Atlas. This starter is designed for one local user (`local-user`), not multi-user public deployment. Add real authentication and authorization before exposing it to the internet.
 - Six-factor metrics are data-dependent. Solve time is shown as collecting until timed-session telemetry is implemented; do not treat missing metrics as a zero score.
 - Python execution uses Pyodide in-browser. It is not a secure server-side online judge and cannot reproduce all LeetCode runtime constraints.
+
+## Revision system (random daily revision + attempt history)
+
+- **Add Question** (dashboard): enter a LeetCode number, URL or slug. Details come from LeetCode's *unofficial* public GraphQL endpoint; if lookup fails you get a manual slug/title form. Duplicates are blocked by slug and by question number.
+- **Daily revision** (`/test`): 2 random questions from your *tracked* questions, one at a time. The session is stored in MongoDB (`RevisionSession`), so a refresh restores it. The daily date boundary is `Asia/Kolkata`.
+- **Practice 2 More Random Questions** creates extra sessions that avoid every question already shown today; when the unseen pool is exhausted you are offered a reshuffle.
+- **History** (`/history`): every attempt is its own `Attempt` document (never overwritten), with search, result and date filters, per-question attempt counts and daily summaries.
+- Built-in sample questions are only practice material; they are never counted as tracked/solved unless you click "Add to tracked".
+- The old `DailyRevision` model / `/api/revision/today` route (if you have them locally) are no longer used and can be deleted; their data is left untouched in MongoDB.
+- Checks: `npm run typecheck`, `npm run lint`, `npm run build`.

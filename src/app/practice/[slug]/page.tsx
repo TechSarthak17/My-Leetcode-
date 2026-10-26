@@ -4,8 +4,16 @@ import {useEffect,useState} from 'react';
 import {useParams} from 'next/navigation';
 import CodeEditor from '@/components/CodeEditor';
 import {ArrowLeft,Play,Save,Lightbulb} from 'lucide-react';
-import { loadPyodide } from 'pyodide';
-let pyodidePromise: ReturnType<typeof loadPyodide> | null = null;
+// Pyodide is loaded from the CDN at runtime. Bundling the npm package pulls Node-only modules
+// (node:fs, node:path…) into the browser build and makes `next build` fail.
+const PYODIDE_VERSION = '0.27.7';
+const PYODIDE_BASE = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
+type PyodideLike = { setStdout: (o: { batched: (t: string) => void }) => void; setStderr: (o: { batched: (t: string) => void }) => void; runPythonAsync: (code: string) => Promise<unknown> };
+let pyodidePromise: Promise<PyodideLike> | null = null;
+async function loadPyodide(opts: { indexURL: string }): Promise<PyodideLike> {
+  const mod = await import(/* webpackIgnore: true */ `${PYODIDE_BASE}pyodide.mjs`);
+  return mod.loadPyodide(opts);
+}
 type Problem={slug:string;title:string;difficulty:string;topic:string;statement:string;examples:string[];starterCode:string;solutionHint:string};
 export default function PracticePage(){const params=useParams<{slug:string}>();const [p,setP]=useState<Problem|null>(null);const [code,setCode]=useState('');const [output,setOutput]=useState('Ready when you are.');const [busy,setBusy]=useState(false);const [hint,setHint]=useState(false);
  useEffect(()=>{fetch('/api/problems').then(r=>r.json()).then(d=>{const found=d.problems.find((x:Problem)=>x.slug===params.slug);if(found){setP(found);setCode(found.starterCode)}})},[params.slug]);

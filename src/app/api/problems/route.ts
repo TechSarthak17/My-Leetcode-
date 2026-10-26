@@ -1,11 +1,31 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { problems } from '@/lib/problems';
-import { connectDB } from '@/lib/db';
+import { connectDB, isDbConfigured } from '@/lib/db';
 import Attempt from '@/models/Attempt';
+import TrackedProblem from '@/models/TrackedProblem';
+import { USER_ID } from '@/lib/user';
+
+// Built-in practice questions (statement + starter code for the Python editor).
+// `tracked` / `solved` are only true for questions the user has explicitly added to their tracked bank.
 export async function GET() {
-  let attempts: {problemSlug:string;result:string;createdAt:Date}[] = [];
-  try { await connectDB(); attempts = await Attempt.find({userId:'local-user'}).select('problemSlug result createdAt').lean() as typeof attempts; } catch { /* local demo still works without database */ }
-  const solved = new Set(attempts.filter(a=>a.result==='solved').map(a=>a.problemSlug));
-  const payload = problems.map(p=>({...p, starterCode:p.starterCode, solved:solved.has(p.slug), attempts:attempts.filter(a=>a.problemSlug===p.slug).length}));
-  return NextResponse.json({problems:payload, databaseConnected: Boolean(process.env.MONGODB_URI)});
+  let attempts: any[] = [];
+  let trackedSlugs = new Set<string>();
+  try {
+    await connectDB();
+    const [a, t]: [any[], any[]] = await Promise.all([
+      Attempt.find({ userId: USER_ID }).select('problemSlug result').lean(),
+      TrackedProblem.find({ userId: USER_ID }).select('slug').lean(),
+    ]);
+    attempts = a;
+    trackedSlugs = new Set(t.map((x) => x.slug));
+  } catch {
+    /* the editor still works without a database */
+  }
+  const payload = problems.map((p) => {
+    const mine = attempts.filter((a) => a.problemSlug === p.slug);
+    const tracked = trackedSlugs.has(p.slug);
+    return { ...p, tracked, solved: tracked && mine.some((a) => a.result === 'solved'), attempts: mine.length };
+  });
+  return NextResponse.json({ problems: payload, databaseConnected: isDbConfigured() });
 }
